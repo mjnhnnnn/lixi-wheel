@@ -22,11 +22,11 @@
     h1 {
       font-size: 3rem;
       text-shadow: 3px 3px 10px black;
-      margin-bottom: 10px; /* giảm tí để tiết kiệm không gian */
+      margin-bottom: 10px;
     }
     #wheel-container {
       position: relative;
-      margin: 10px 20px; /* giảm margin dọc */
+      margin: 10px 20px;
     }
     canvas {
       border-radius: 50%;
@@ -52,7 +52,7 @@
       border-radius: 50px;
       cursor: pointer;
       box-shadow: 0 5px 15px black;
-      margin-top: 10px; /* giảm margin để nút sát hơn */
+      margin-top: 10px;
       transition: all 0.2s ease;
     }
     #spin:hover {
@@ -72,6 +72,7 @@
       align-items: center;
       justify-content: center;
       display: none;
+      z-index: 30;
     }
     #result-modal h2 {
       font-size: 4rem;
@@ -118,7 +119,6 @@
       { text: '500.000đ', color: '#FF1493' }
     ];
 
-    // Chia đều 5 phần bằng nhau
     const numSegments = prizes.length;
     const anglePerSegment = (Math.PI * 2) / numSegments;
     const segments = [];
@@ -137,7 +137,6 @@
     let isSpinning = false;
 
     function resizeCanvas() {
-      // Thu nhỏ hơn trên PC (ưu tiên height), vẫn full trên mobile
       const size = Math.min(window.innerWidth * 0.85, window.innerHeight * 0.7);
       canvas.width = size;
       canvas.height = size;
@@ -168,7 +167,6 @@
         ctx.lineWidth = 4;
         ctx.stroke();
 
-        // text
         const textAngle = seg.start + (seg.end - seg.start) / 2;
         ctx.rotate(textAngle);
         ctx.textAlign = 'center';
@@ -181,7 +179,6 @@
 
       ctx.restore();
 
-      // center circle
       ctx.beginPath();
       ctx.arc(cx, cy, 40, 0, Math.PI * 2);
       ctx.fillStyle = '#333';
@@ -202,8 +199,8 @@
           const segMidAngle = winningSeg.start + (winningSeg.end - winningSeg.start) / 2;
 
           const extraSpins = 6 + Math.random() * 4;
-          let targetRotation = segMidAngle + extraSpins * Math.PI * 2;
-          targetRotation = -targetRotation;
+          // Fix alignment: đưa mid angle đúng dưới pointer top (-Math.PI/2)
+          let targetRotation = extraSpins * Math.PI * 2 - (segMidAngle + Math.PI / 2);
 
           const duration = 6000 + Math.random() * 3000;
           const startTime = Date.now();
