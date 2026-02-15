@@ -1,0 +1,252 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Vòng Quay Lì Xì May Mắn</title>
+  <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"></script>
+  <style>
+    body {
+      margin: 0;
+      padding: 0;
+      font-family: 'Arial', sans-serif;
+      background: url('https://thumbs.dreamstime.com/b/red-envelopes-falling-gold-coins-festive-background-packets-wealth-concept-d-render-chinese-new-year-promotion-437589863.jpg') center/cover no-repeat fixed;
+      color: gold;
+      text-align: center;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+    }
+    h1 {
+      font-size: 3rem;
+      text-shadow: 3px 3px 10px black;
+      margin-bottom: 10px; /* giảm tí để tiết kiệm không gian */
+    }
+    #wheel-container {
+      position: relative;
+      margin: 10px 20px; /* giảm margin dọc */
+    }
+    canvas {
+      border-radius: 50%;
+      box-shadow: 0 0 30px gold;
+    }
+    #pointer {
+      position: absolute;
+      top: -10px;
+      left: 50%;
+      transform: translateX(-50%);
+      font-size: 60px;
+      color: gold;
+      text-shadow: 0 0 10px black;
+      pointer-events: none;
+      z-index: 10;
+    }
+    #spin {
+      padding: 15px 40px;
+      font-size: 1.8rem;
+      background: gold;
+      color: red;
+      border: none;
+      border-radius: 50px;
+      cursor: pointer;
+      box-shadow: 0 5px 15px black;
+      margin-top: 10px; /* giảm margin để nút sát hơn */
+      transition: all 0.2s ease;
+    }
+    #spin:hover {
+      transform: scale(1.05);
+      box-shadow: 0 8px 20px black;
+    }
+    #spin:disabled {
+      opacity: 0.6;
+      cursor: not-allowed;
+    }
+    #result-modal {
+      position: fixed;
+      top: 0; left: 0; right: 0; bottom: 0;
+      background: rgba(0,0,0,0.8);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      display: none;
+    }
+    #result-modal h2 {
+      font-size: 4rem;
+      color: gold;
+    }
+    #result-modal p {
+      font-size: 3rem;
+      margin: 20px;
+    }
+    @media (max-width: 600px) {
+      h1 { font-size: 2rem; margin-bottom: 5px; }
+      #wheel-container { margin: 5px 10px; }
+      #spin { font-size: 1.5rem; padding: 12px 30px; margin-top: 5px; }
+    }
+  </style>
+</head>
+<body>
+  <h1>Vòng Quay Lì Xì May Mắn</h1>
+  <div id="wheel-container">
+    <div id="pointer">▼</div>
+    <canvas id="wheel"></canvas>
+  </div>
+  <button id="spin">Quay Ngay!</button>
+
+  <div id="result-modal">
+    <h2>Chúc Mừng Năm Mới!</h2>
+    <p>Bạn nhận được <span id="prize-amount"></span> 🧧🎉</p>
+    <button id="close-modal" style="padding:10px 30px;font-size:1.5rem;background:gold;color:red;border:none;border-radius:30px;cursor:pointer;">Quay Lại</button>
+  </div>
+
+  <script>
+    const canvas = document.getElementById('wheel');
+    const ctx = canvas.getContext('2d');
+    const spinBtn = document.getElementById('spin');
+    const resultModal = document.getElementById('result-modal');
+    const prizeAmount = document.getElementById('prize-amount');
+    const closeModal = document.getElementById('close-modal');
+
+    const prizes = [
+      { text: '10.000đ', color: '#FF0000' },
+      { text: '20.000đ', color: '#FFD700' },
+      { text: '50.000đ', color: '#FF0000' },
+      { text: '100.000đ', color: '#FFD700' },
+      { text: '500.000đ', color: '#FF1493' }
+    ];
+
+    // Chia đều 5 phần bằng nhau
+    const numSegments = prizes.length;
+    const anglePerSegment = (Math.PI * 2) / numSegments;
+    const segments = [];
+    let startAngle = 0;
+    prizes.forEach(p => {
+      segments.push({
+        text: p.text,
+        color: p.color,
+        start: startAngle,
+        end: startAngle + anglePerSegment
+      });
+      startAngle += anglePerSegment;
+    });
+
+    let currentRotation = 0;
+    let isSpinning = false;
+
+    function resizeCanvas() {
+      // Thu nhỏ hơn trên PC (ưu tiên height), vẫn full trên mobile
+      const size = Math.min(window.innerWidth * 0.85, window.innerHeight * 0.7);
+      canvas.width = size;
+      canvas.height = size;
+      drawWheel();
+    }
+    window.addEventListener('resize', resizeCanvas);
+    resizeCanvas();
+
+    function drawWheel() {
+      const cx = canvas.width / 2;
+      const cy = canvas.height / 2;
+      const radius = cx - 30;
+
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+      ctx.save();
+      ctx.translate(cx, cy);
+      ctx.rotate(currentRotation);
+
+      segments.forEach(seg => {
+        ctx.beginPath();
+        ctx.moveTo(0, 0);
+        ctx.arc(0, 0, radius, seg.start, seg.end);
+        ctx.closePath();
+        ctx.fillStyle = seg.color;
+        ctx.fill();
+        ctx.strokeStyle = 'white';
+        ctx.lineWidth = 4;
+        ctx.stroke();
+
+        // text
+        const textAngle = seg.start + (seg.end - seg.start) / 2;
+        ctx.rotate(textAngle);
+        ctx.textAlign = 'center';
+        ctx.fillStyle = 'white';
+        ctx.font = 'bold 24px Arial';
+        ctx.textBaseline = 'middle';
+        ctx.fillText(seg.text, radius * 0.65, 0);
+        ctx.rotate(-textAngle);
+      });
+
+      ctx.restore();
+
+      // center circle
+      ctx.beginPath();
+      ctx.arc(cx, cy, 40, 0, Math.PI * 2);
+      ctx.fillStyle = '#333';
+      ctx.fill();
+    }
+
+    spinBtn.onclick = () => {
+      if (isSpinning) return;
+      isSpinning = true;
+      spinBtn.disabled = true;
+      resultModal.style.display = 'none';
+
+      fetch('/.netlify/functions/get-prize')
+        .then(res => res.json())
+        .then(data => {
+          const winningText = data.prize;
+          const winningSeg = segments.find(s => s.text === winningText);
+          const segMidAngle = winningSeg.start + (winningSeg.end - winningSeg.start) / 2;
+
+          const extraSpins = 6 + Math.random() * 4;
+          let targetRotation = segMidAngle + extraSpins * Math.PI * 2;
+          targetRotation = -targetRotation;
+
+          const duration = 6000 + Math.random() * 3000;
+          const startTime = Date.now();
+          const startRotation = currentRotation;
+
+          function animate() {
+            const elapsed = Date.now() - startTime;
+            const progress = Math.min(elapsed / duration, 1);
+            const ease = 1 - Math.pow(1 - progress, 4);
+
+            currentRotation = startRotation + (targetRotation - startRotation) * ease;
+            drawWheel();
+
+            if (progress < 1) {
+              requestAnimationFrame(animate);
+            } else {
+              isSpinning = false;
+              spinBtn.disabled = false;
+              prizeAmount.textContent = winningText;
+              resultModal.style.display = 'flex';
+
+              confetti({
+                particleCount: winningText === '500.000đ' ? 500 : 150,
+                spread: winningText === '500.000đ' ? 100 : 70,
+                origin: { y: 0.6 }
+              });
+            }
+          }
+          animate();
+        })
+        .catch(err => {
+          console.error(err);
+          alert('Lỗi kết nối server, thử lại nhé!');
+          isSpinning = false;
+          spinBtn.disabled = false;
+        });
+    };
+
+    closeModal.onclick = () => {
+      resultModal.style.display = 'none';
+    };
+
+    drawWheel();
+  </script>
+</body>
+</html>
