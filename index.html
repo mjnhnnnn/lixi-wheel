@@ -62,6 +62,13 @@
     #spin:disabled {
       opacity: 0.6;
       cursor: not-allowed;
+      background: gray;
+    }
+    #limit-message {
+      font-size: 1.5rem;
+      color: gold;
+      margin-top: 20px;
+      display: none;
     }
     #result-modal {
       position: fixed;
@@ -86,6 +93,7 @@
       h1 { font-size: 2rem; margin-bottom: 5px; }
       #wheel-container { margin: 5px 10px; }
       #spin { font-size: 1.5rem; padding: 12px 30px; margin-top: 5px; }
+      #limit-message { font-size: 1.2rem; }
     }
   </style>
 </head>
@@ -96,6 +104,7 @@
     <canvas id="wheel"></canvas>
   </div>
   <button id="spin">Quay Ngay!</button>
+  <div id="limit-message">Hết lượt quay hôm nay rồi, mai quay tiếp nhé! 🧧</div>
 
   <div id="result-modal">
     <h2>Chúc Mừng Năm Mới!</h2>
@@ -110,6 +119,33 @@
     const resultModal = document.getElementById('result-modal');
     const prizeAmount = document.getElementById('prize-amount');
     const closeModal = document.getElementById('close-modal');
+    const limitMessage = document.getElementById('limit-message');
+
+    const MAX_SPINS_PER_DAY = 3;
+
+    // Kiểm tra lượt quay (localStorage)
+    function getTodayDate() {
+      const date = new Date();
+      return `${date.getDate()}/${date.getMonth() + 1}/${date.getFullYear()}`;
+    }
+
+    let spinData = JSON.parse(localStorage.getItem('spinData')) || { date: getTodayDate(), count: 0 };
+
+    if (spinData.date !== getTodayDate()) {
+      spinData = { date: getTodayDate(), count: 0 };
+      localStorage.setItem('spinData', JSON.stringify(spinData));
+    }
+
+    function updateSpinLimit() {
+      if (spinData.count >= MAX_SPINS_PER_DAY) {
+        spinBtn.disabled = true;
+        limitMessage.style.display = 'block';
+      } else {
+        spinBtn.disabled = false;
+        limitMessage.style.display = 'none';
+      }
+    }
+    updateSpinLimit();
 
     const prizes = [
       { text: '10.000đ', color: '#FF0000' },
@@ -186,7 +222,7 @@
     }
 
     spinBtn.onclick = () => {
-      if (isSpinning) return;
+      if (isSpinning || spinData.count >= MAX_SPINS_PER_DAY) return;
       isSpinning = true;
       spinBtn.disabled = true;
       resultModal.style.display = 'none';
@@ -199,7 +235,6 @@
           const segMidAngle = winningSeg.start + (winningSeg.end - winningSeg.start) / 2;
 
           const extraSpins = 6 + Math.random() * 4;
-          // Fix alignment: đưa mid angle đúng dưới pointer top (-Math.PI/2)
           let targetRotation = extraSpins * Math.PI * 2 - (segMidAngle + Math.PI / 2);
 
           const duration = 6000 + Math.random() * 3000;
@@ -218,7 +253,6 @@
               requestAnimationFrame(animate);
             } else {
               isSpinning = false;
-              spinBtn.disabled = false;
               prizeAmount.textContent = winningText;
               resultModal.style.display = 'flex';
 
@@ -227,6 +261,11 @@
                 spread: winningText === '500.000đ' ? 100 : 70,
                 origin: { y: 0.6 }
               });
+
+              // Tăng lượt quay
+              spinData.count++;
+              localStorage.setItem('spinData', JSON.stringify(spinData));
+              updateSpinLimit();
             }
           }
           animate();
@@ -235,12 +274,13 @@
           console.error(err);
           alert('Lỗi kết nối server, thử lại nhé!');
           isSpinning = false;
-          spinBtn.disabled = false;
+          updateSpinLimit();
         });
     };
 
     closeModal.onclick = () => {
       resultModal.style.display = 'none';
+      updateSpinLimit();
     };
 
     drawWheel();
