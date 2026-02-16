@@ -72,218 +72,231 @@
     }
     #result-modal {
       position: fixed;
-      top: 0; left: 0; right: 0; bottom: 0;
-      background: rgba(0,0,0,0.8);
-      display: flex;
-      flex-direction: column;
+      inset: 0;
+      background: rgba(0,0,0,0.85);
+      display: none;
       align-items: center;
       justify-content: center;
-      display: none;
+      flex-direction: column;
       z-index: 30;
     }
     #result-modal h2 {
       font-size: 4rem;
-      color: gold;
+      margin-bottom: 20px;
     }
     #result-modal p {
       font-size: 3rem;
       margin: 20px;
     }
-    @media (max-width: 600px) {
-      h1 { font-size: 2rem; margin-bottom: 5px; }
-      #wheel-container { margin: 5px 10px; }
-      #spin { font-size: 1.5rem; padding: 12px 30px; margin-top: 5px; }
-      #limit-message { font-size: 1.2rem; }
-    }
   </style>
 </head>
 <body>
-  <h1>Vòng Quay Lì Xì May Mắn</h1>
-  <div id="wheel-container">
-    <div id="pointer">▼</div>
-    <canvas id="wheel"></canvas>
-  </div>
-  <button id="spin">Quay Ngay!</button>
-  <div id="limit-message">Hết lượt quay hôm nay rồi, mai quay tiếp nhé! 🧧</div>
 
-  <div id="result-modal">
-    <h2>Chúc Mừng Năm Mới!</h2>
-    <p>Bạn nhận được <span id="prize-amount"></span> 🧧🎉</p>
-    <button id="close-modal" style="padding:10px 30px;font-size:1.5rem;background:gold;color:red;border:none;border-radius:30px;cursor:pointer;">Quay Lại</button>
-  </div>
+<h1>Vòng Quay Lì Xì May Mắn</h1>
 
-  <script>
-    const canvas = document.getElementById('wheel');
-    const ctx = canvas.getContext('2d');
-    const spinBtn = document.getElementById('spin');
-    const resultModal = document.getElementById('result-modal');
-    const prizeAmount = document.getElementById('prize-amount');
-    const closeModal = document.getElementById('close-modal');
-    const limitMessage = document.getElementById('limit-message');
+<div id="wheel-container">
+  <div id="pointer">▼</div>
+  <canvas id="wheel"></canvas>
+</div>
 
-    const MAX_SPINS_PER_DAY = 3;
+<button id="spin">Quay Ngay!</button>
+<div id="limit-message">Hết lượt quay hôm nay rồi, mai quay tiếp nhé! 🧧</div>
 
-    // Kiểm tra lượt quay (localStorage)
-    function getTodayDate() {
-      const date = new Date();
-      return `${date.getDate()}/${date.getMonth() + 1}/${date.getFullYear()}`;
-    }
+<div id="result-modal">
+  <h2>Chúc Mừng Năm Mới!</h2>
+  <p>Bạn nhận được <span id="prize-amount"></span> 🧧🎉</p>
+  <button id="close-modal" style="padding:10px 30px;font-size:1.5rem;background:gold;color:red;border:none;border-radius:30px;cursor:pointer;">Quay Lại</button>
+</div>
 
-    let spinData = JSON.parse(localStorage.getItem('spinData')) || { date: getTodayDate(), count: 0 };
+<script>
+const canvas = document.getElementById('wheel');
+const ctx = canvas.getContext('2d');
+const spinBtn = document.getElementById('spin');
+const resultModal = document.getElementById('result-modal');
+const prizeAmount = document.getElementById('prize-amount');
+const closeModal = document.getElementById('close-modal');
+const limitMessage = document.getElementById('limit-message');
 
-    if (spinData.date !== getTodayDate()) {
-      spinData = { date: getTodayDate(), count: 0 };
-      localStorage.setItem('spinData', JSON.stringify(spinData));
-    }
+const MAX_SPINS_PER_DAY = 3;
 
-    function updateSpinLimit() {
-      if (spinData.count >= MAX_SPINS_PER_DAY) {
-        spinBtn.disabled = true;
-        limitMessage.style.display = 'block';
-      } else {
-        spinBtn.disabled = false;
-        limitMessage.style.display = 'none';
+function getTodayDate() {
+  const d = new Date();
+  return `${d.getDate()}/${d.getMonth()+1}/${d.getFullYear()}`;
+}
+
+let spinData = JSON.parse(localStorage.getItem('spinData')) || { date: getTodayDate(), count: 0 };
+
+if (spinData.date !== getTodayDate()) {
+  spinData = { date: getTodayDate(), count: 0 };
+  localStorage.setItem('spinData', JSON.stringify(spinData));
+}
+
+function updateSpinLimit() {
+  if (spinData.count >= MAX_SPINS_PER_DAY) {
+    spinBtn.disabled = true;
+    limitMessage.style.display = 'block';
+  } else {
+    spinBtn.disabled = false;
+    limitMessage.style.display = 'none';
+  }
+}
+updateSpinLimit();
+
+/* ======= PRIZES (PHẢI KHỚP BACKEND) ======= */
+const prizes = [
+  { text: '10.000đ', color: '#FF0000' },
+  { text: '20.000đ', color: '#FFD700' },
+  { text: '50.000đ', color: '#FF4500' },
+  { text: '100.000đ', color: '#DAA520' },
+  { text: '500.000đ', color: '#FF1493' },
+  { text: '1.000.000đ', color: '#8A2BE2' },
+  { text: '5.000.000đ', color: '#000000' }
+];
+
+const segments = [];
+const numSegments = prizes.length;
+const anglePerSegment = (Math.PI * 2) / numSegments;
+
+for (let i = 0; i < numSegments; i++) {
+  segments.push({
+    text: prizes[i].text,
+    color: prizes[i].color,
+    start: i * anglePerSegment,
+    end: (i + 1) * anglePerSegment
+  });
+}
+
+let currentRotation = 0;
+let isSpinning = false;
+
+function resizeCanvas() {
+  const size = Math.min(window.innerWidth * 0.85, window.innerHeight * 0.7);
+  canvas.width = size;
+  canvas.height = size;
+  drawWheel();
+}
+window.addEventListener('resize', resizeCanvas);
+resizeCanvas();
+
+function drawWheel() {
+  const cx = canvas.width / 2;
+  const cy = canvas.height / 2;
+  const radius = cx - 30;
+
+  ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+  ctx.save();
+  ctx.translate(cx, cy);
+  ctx.rotate(currentRotation);
+
+  segments.forEach(seg => {
+    ctx.beginPath();
+    ctx.moveTo(0, 0);
+    ctx.arc(0, 0, radius, seg.start, seg.end);
+    ctx.closePath();
+    ctx.fillStyle = seg.color;
+    ctx.fill();
+    ctx.strokeStyle = 'white';
+    ctx.lineWidth = 3;
+    ctx.stroke();
+
+    const mid = seg.start + (seg.end - seg.start)/2;
+    ctx.save();
+    ctx.rotate(mid);
+    ctx.textAlign = 'center';
+    ctx.fillStyle = 'white';
+    ctx.font = `bold ${canvas.width/25}px Arial`;
+    ctx.textBaseline = 'middle';
+    ctx.fillText(seg.text, radius * 0.65, 0);
+    ctx.restore();
+  });
+
+  ctx.restore();
+
+  ctx.beginPath();
+  ctx.arc(cx, cy, 40, 0, Math.PI*2);
+  ctx.fillStyle = '#222';
+  ctx.fill();
+}
+
+spinBtn.onclick = () => {
+  if (isSpinning || spinData.count >= MAX_SPINS_PER_DAY) return;
+
+  isSpinning = true;
+  spinBtn.disabled = true;
+  resultModal.style.display = 'none';
+
+  fetch('/.netlify/functions/get-prize')
+    .then(res => res.json())
+    .then(data => {
+      let winningText = data.prize;
+
+      const winningSeg = segments.find(s => s.text === winningText);
+      if (!winningSeg) {
+        winningText = '10.000đ';
       }
-    }
-    updateSpinLimit();
 
-    const prizes = [
-      { text: '10.000đ', color: '#FF0000' },
-      { text: '20.000đ', color: '#FFD700' },
-      { text: '50.000đ', color: '#FF0000' },
-      { text: '100.000đ', color: '#FFD700' },
-      { text: '500.000đ', color: '#FF1493' }
-    ];
+      const segMidAngle = winningSeg.start + (winningSeg.end - winningSeg.start)/2;
+      const pointerAngle = Math.PI/2;
 
-    const numSegments = prizes.length;
-    const anglePerSegment = (Math.PI * 2) / numSegments;
-    const segments = [];
-    let startAngle = 0;
-    prizes.forEach(p => {
-      segments.push({
-        text: p.text,
-        color: p.color,
-        start: startAngle,
-        end: startAngle + anglePerSegment
-      });
-      startAngle += anglePerSegment;
-    });
+      const extraSpins = 6 + Math.random()*3;
 
-    let currentRotation = 0;
-    let isSpinning = false;
+      const targetRotation =
+        extraSpins * Math.PI * 2 +
+        (Math.PI*2 - segMidAngle - pointerAngle);
 
-    function resizeCanvas() {
-      const size = Math.min(window.innerWidth * 0.85, window.innerHeight * 0.7);
-      canvas.width = size;
-      canvas.height = size;
-      drawWheel();
-    }
-    window.addEventListener('resize', resizeCanvas);
-    resizeCanvas();
+      const duration = 6000;
+      const start = Date.now();
+      const startRotation = currentRotation;
 
-    function drawWheel() {
-      const cx = canvas.width / 2;
-      const cy = canvas.height / 2;
-      const radius = cx - 30;
+      function animate() {
+        const progress = Math.min((Date.now()-start)/duration,1);
+        const ease = 1 - Math.pow(1-progress,4);
 
-      ctx.clearRect(0, 0, canvas.width, canvas.height);
+        currentRotation = startRotation + (targetRotation-startRotation)*ease;
+        drawWheel();
 
-      ctx.save();
-      ctx.translate(cx, cy);
-      ctx.rotate(currentRotation);
-
-      segments.forEach(seg => {
-        ctx.beginPath();
-        ctx.moveTo(0, 0);
-        ctx.arc(0, 0, radius, seg.start, seg.end);
-        ctx.closePath();
-        ctx.fillStyle = seg.color;
-        ctx.fill();
-        ctx.strokeStyle = 'white';
-        ctx.lineWidth = 4;
-        ctx.stroke();
-
-        const textAngle = seg.start + (seg.end - seg.start) / 2;
-        ctx.rotate(textAngle);
-        ctx.textAlign = 'center';
-        ctx.fillStyle = 'white';
-        ctx.font = 'bold 24px Arial';
-        ctx.textBaseline = 'middle';
-        ctx.fillText(seg.text, radius * 0.65, 0);
-        ctx.rotate(-textAngle);
-      });
-
-      ctx.restore();
-
-      ctx.beginPath();
-      ctx.arc(cx, cy, 40, 0, Math.PI * 2);
-      ctx.fillStyle = '#333';
-      ctx.fill();
-    }
-
-    spinBtn.onclick = () => {
-      if (isSpinning || spinData.count >= MAX_SPINS_PER_DAY) return;
-      isSpinning = true;
-      spinBtn.disabled = true;
-      resultModal.style.display = 'none';
-
-      fetch('/.netlify/functions/get-prize')
-        .then(res => res.json())
-        .then(data => {
-          const winningText = data.prize;
-          const winningSeg = segments.find(s => s.text === winningText);
-          const segMidAngle = winningSeg.start + (winningSeg.end - winningSeg.start) / 2;
-
-          const extraSpins = 6 + Math.random() * 4;
-          let targetRotation = extraSpins * Math.PI * 2 - (segMidAngle + Math.PI / 2);
-
-          const duration = 6000 + Math.random() * 3000;
-          const startTime = Date.now();
-          const startRotation = currentRotation;
-
-          function animate() {
-            const elapsed = Date.now() - startTime;
-            const progress = Math.min(elapsed / duration, 1);
-            const ease = 1 - Math.pow(1 - progress, 4);
-
-            currentRotation = startRotation + (targetRotation - startRotation) * ease;
-            drawWheel();
-
-            if (progress < 1) {
-              requestAnimationFrame(animate);
-            } else {
-              isSpinning = false;
-              prizeAmount.textContent = winningText;
-              resultModal.style.display = 'flex';
-
-              confetti({
-                particleCount: winningText === '500.000đ' ? 500 : 150,
-                spread: winningText === '500.000đ' ? 100 : 70,
-                origin: { y: 0.6 }
-              });
-
-              // Tăng lượt quay
-              spinData.count++;
-              localStorage.setItem('spinData', JSON.stringify(spinData));
-              updateSpinLimit();
-            }
-          }
-          animate();
-        })
-        .catch(err => {
-          console.error(err);
-          alert('Lỗi kết nối server, thử lại nhé!');
+        if (progress < 1) {
+          requestAnimationFrame(animate);
+        } else {
           isSpinning = false;
+          prizeAmount.textContent = winningText;
+          resultModal.style.display = 'flex';
+
+          let particle = 150;
+          let spread = 70;
+
+          if (winningText === '500.000đ') { particle=400; spread=90; }
+          if (winningText === '1.000.000đ') { particle=700; spread=120; }
+          if (winningText === '5.000.000đ') { particle=1200; spread=150; }
+
+          confetti({
+            particleCount: particle,
+            spread: spread,
+            origin: { y: 0.6 }
+          });
+
+          spinData.count++;
+          localStorage.setItem('spinData', JSON.stringify(spinData));
           updateSpinLimit();
-        });
-    };
-
-    closeModal.onclick = () => {
-      resultModal.style.display = 'none';
+        }
+      }
+      animate();
+    })
+    .catch(() => {
+      alert("Lỗi kết nối server!");
+      isSpinning = false;
       updateSpinLimit();
-    };
+    });
+};
 
-    drawWheel();
-  </script>
+closeModal.onclick = () => {
+  resultModal.style.display = 'none';
+  updateSpinLimit();
+};
+
+drawWheel();
+</script>
+
 </body>
 </html>
