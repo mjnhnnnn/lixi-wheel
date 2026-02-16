@@ -1,11 +1,9 @@
 const prizes = [
-  { text: "10.000đ", prob: 90 },
-  { text: "20.000đ", prob: 5 },
-  { text: "50.000đ", prob: 3 },
-  { text: "100.000đ", prob: 1.5 },
-  { text: "500.000đ", prob: 0.3 },
-  { text: "1.000.000đ", prob: 0.15 },
-  { text: "5.000.000đ", prob: 0.05 }
+  { text: "10.000đ", prob: 48 },
+  { text: "20.000đ", prob: 48 },
+  { text: "100.000đ", prob: 3 },
+  { text: "500.000đ", prob: 0.8 },
+  { text: "5.000.000đ", prob: 0.2 }
 ];
 
 const totalProb = prizes.reduce((sum, p) => sum + p.prob, 0);

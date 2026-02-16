@@ -109,18 +109,16 @@ const resultModal = document.getElementById('result-modal');
 const prizeAmount = document.getElementById('prize-amount');
 const closeModal = document.getElementById('close-modal');
 
-/* ======= PRIZES - GIỮ NGUYÊN MÀU SẮC ======= */
+/* ======= PRIZES - CẬP NHẬT THEO BACKEND (5 GIẢI) ======= */
 const prizes = [
   { text: '10.000đ', color: '#FF0000' },
   { text: '20.000đ', color: '#FFD700' },
-  { text: '50.000đ', color: '#FF4500' },
   { text: '100.000đ', color: '#DAA520' },
   { text: '500.000đ', color: '#FF1493' },
-  { text: '1.000.000đ', color: '#8A2BE2' },
   { text: '5.000.000đ', color: '#000000' }
 ];
 
-// Vòng quay được chia ĐỀU 7 phần (cho đẹp)
+// Vòng quay được chia ĐỀU 5 phần (cho đẹp)
 const numSegments = prizes.length;
 const anglePerSegment = (Math.PI * 2) / numSegments;
 
@@ -129,7 +127,7 @@ for (let i = 0; i < numSegments; i++) {
   segments.push({
     text: prizes[i].text,
     color: prizes[i].color,
-    index: i, // Lưu index để dễ mapping
+    index: i,
     start: i * anglePerSegment,
     end: (i + 1) * anglePerSegment
   });
@@ -204,10 +202,9 @@ spinBtn.onclick = () => {
       const winningText = data.prize;
 
       // Tìm index của ô thắng (dựa trên text)
-      const winningIndex = prizes.findIndex(p => p.text === winningText);
+      let winningIndex = prizes.findIndex(p => p.text === winningText);
       if (winningIndex === -1) {
-        // Fallback nếu không tìm thấy
-        winningIndex = 0;
+        winningIndex = 0; // Fallback về 10.000đ nếu lỗi
       }
 
       // Lấy segment tương ứng (vẽ đều)
@@ -240,12 +237,18 @@ spinBtn.onclick = () => {
           prizeAmount.textContent = winningText;
           resultModal.style.display = 'flex';
 
+          // Hiệu ứng confetti theo giá trị giải
           let particle = 150;
           let spread = 70;
 
-          if (winningText === '500.000đ') { particle=400; spread=90; }
-          if (winningText === '1.000.000đ') { particle=700; spread=120; }
-          if (winningText === '5.000.000đ') { particle=1200; spread=150; }
+          if (winningText === '500.000đ') { 
+            particle = 400; 
+            spread = 90; 
+          }
+          if (winningText === '5.000.000đ') { 
+            particle = 1200; 
+            spread = 150; 
+          }
 
           confetti({
             particleCount: particle,
