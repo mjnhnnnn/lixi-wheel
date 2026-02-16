@@ -109,34 +109,31 @@ const resultModal = document.getElementById('result-modal');
 const prizeAmount = document.getElementById('prize-amount');
 const closeModal = document.getElementById('close-modal');
 
-/* ======= PRIZES (PHẢI KHỚP BACKEND) ======= */
+/* ======= PRIZES - GIỮ NGUYÊN MÀU SẮC ======= */
 const prizes = [
-  { text: '10.000đ', prob: 90, color: '#FF0000' },
-  { text: '20.000đ', prob: 5, color: '#FFD700' },
-  { text: '50.000đ', prob: 3, color: '#FF4500' },
-  { text: '100.000đ', prob: 1.5, color: '#DAA520' },
-  { text: '500.000đ', prob: 0.3, color: '#FF1493' },
-  { text: '1.000.000đ', prob: 0.15, color: '#8A2BE2' },
-  { text: '5.000.000đ', prob: 0.05, color: '#000000' }
+  { text: '10.000đ', color: '#FF0000' },
+  { text: '20.000đ', color: '#FFD700' },
+  { text: '50.000đ', color: '#FF4500' },
+  { text: '100.000đ', color: '#DAA520' },
+  { text: '500.000đ', color: '#FF1493' },
+  { text: '1.000.000đ', color: '#8A2BE2' },
+  { text: '5.000.000đ', color: '#000000' }
 ];
 
-// Tính tổng xác suất
-const totalProb = prizes.reduce((sum, p) => sum + p.prob, 0);
+// Vòng quay được chia ĐỀU 7 phần (cho đẹp)
+const numSegments = prizes.length;
+const anglePerSegment = (Math.PI * 2) / numSegments;
 
-// Xây dựng segments dựa trên tỷ lệ xác suất
-let segments = [];
-let startAngle = 0;
-prizes.forEach(p => {
-  const angle = (p.prob / totalProb) * Math.PI * 2;
+const segments = [];
+for (let i = 0; i < numSegments; i++) {
   segments.push({
-    text: p.text,
-    color: p.color,
-    prob: p.prob,
-    start: startAngle,
-    end: startAngle + angle
+    text: prizes[i].text,
+    color: prizes[i].color,
+    index: i, // Lưu index để dễ mapping
+    start: i * anglePerSegment,
+    end: (i + 1) * anglePerSegment
   });
-  startAngle += angle;
-});
+}
 
 let currentRotation = 0;
 let isSpinning = false;
@@ -204,19 +201,23 @@ spinBtn.onclick = () => {
   fetch('/.netlify/functions/get-prize')
     .then(res => res.json())
     .then(data => {
-      let winningText = data.prize;
+      const winningText = data.prize;
 
-      const winningSeg = segments.find(s => s.text === winningText);
-      if (!winningSeg) {
-        winningText = '10.000đ';
+      // Tìm index của ô thắng (dựa trên text)
+      const winningIndex = prizes.findIndex(p => p.text === winningText);
+      if (winningIndex === -1) {
+        // Fallback nếu không tìm thấy
+        winningIndex = 0;
       }
 
+      // Lấy segment tương ứng (vẽ đều)
+      const winningSeg = segments[winningIndex];
       const segMidAngle = winningSeg.start + (winningSeg.end - winningSeg.start)/2;
       const pointerAngle = Math.PI/2; // Kim chỉ xuống dưới
 
       const extraSpins = 6 + Math.floor(Math.random() * 4); // 6-9 vòng
 
-      // Tính target rotation: đưa ô thắng về dưới kim + số vòng quay thẩm mỹ
+      // Tính target rotation: đưa ô thắng về dưới kim
       const targetRotation = 
         extraSpins * Math.PI * 2 +
         (Math.PI * 2 - segMidAngle - pointerAngle);
