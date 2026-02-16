@@ -24,14 +24,23 @@
       text-shadow: 3px 3px 10px black;
       margin-bottom: 10px;
     }
-    #wheel-container { position: relative; margin: 10px 20px; }
-    canvas { border-radius: 50%; box-shadow: 0 0 30px gold; }
+    #wheel-container {
+      position: relative;
+      margin: 10px 20px;
+    }
+    canvas {
+      border-radius: 50%;
+      box-shadow: 0 0 30px gold;
+    }
     #pointer {
       position: absolute;
       top: -10px;
       left: 50%;
       transform: translateX(-50%);
       font-size: 60px;
+      color: gold;
+      text-shadow: 0 0 10px black;
+      pointer-events: none;
       z-index: 10;
     }
     #spin {
@@ -44,9 +53,17 @@
       cursor: pointer;
       box-shadow: 0 5px 15px black;
       margin-top: 10px;
+      transition: all 0.2s ease;
     }
-    #spin:disabled { opacity: 0.6; background: gray; }
-    #limit-message { font-size: 1.5rem; margin-top: 20px; display: none; }
+    #spin:hover {
+      transform: scale(1.05);
+      box-shadow: 0 8px 20px black;
+    }
+    #spin:disabled {
+      opacity: 0.6;
+      cursor: not-allowed;
+      background: gray;
+    }
     #result-modal {
       position: fixed;
       inset: 0;
@@ -57,8 +74,14 @@
       flex-direction: column;
       z-index: 30;
     }
-    #result-modal h2 { font-size: 4rem; }
-    #result-modal p { font-size: 3rem; margin: 20px; }
+    #result-modal h2 {
+      font-size: 4rem;
+      margin-bottom: 20px;
+    }
+    #result-modal p {
+      font-size: 3rem;
+      margin: 20px;
+    }
   </style>
 </head>
 <body>
@@ -71,12 +94,11 @@
 </div>
 
 <button id="spin">Quay Ngay!</button>
-<div id="limit-message">Hết lượt quay hôm nay rồi, mai quay tiếp nhé! 🧧</div>
 
 <div id="result-modal">
   <h2>Chúc Mừng Năm Mới!</h2>
   <p>Bạn nhận được <span id="prize-amount"></span> 🧧🎉</p>
-  <button id="close-modal">Quay Lại</button>
+  <button id="close-modal" style="padding:10px 30px;font-size:1.5rem;background:gold;color:red;border:none;border-radius:30px;cursor:pointer;">Quay Lại</button>
 </div>
 
 <script>
@@ -86,54 +108,35 @@ const spinBtn = document.getElementById('spin');
 const resultModal = document.getElementById('result-modal');
 const prizeAmount = document.getElementById('prize-amount');
 const closeModal = document.getElementById('close-modal');
-const limitMessage = document.getElementById('limit-message');
 
-const MAX_SPINS_PER_DAY = 3;
-
-function getTodayDate() {
-  const d = new Date();
-  return `${d.getDate()}/${d.getMonth()+1}/${d.getFullYear()}`;
-}
-
-let spinData = JSON.parse(localStorage.getItem('spinData')) || { date: getTodayDate(), count: 0 };
-if (spinData.date !== getTodayDate()) {
-  spinData = { date: getTodayDate(), count: 0 };
-  localStorage.setItem('spinData', JSON.stringify(spinData));
-}
-
-function updateSpinLimit() {
-  if (spinData.count >= MAX_SPINS_PER_DAY) {
-    spinBtn.disabled = true;
-    limitMessage.style.display = 'block';
-  } else {
-    spinBtn.disabled = false;
-    limitMessage.style.display = 'none';
-  }
-}
-updateSpinLimit();
-
+/* ======= PRIZES (PHẢI KHỚP BACKEND) ======= */
 const prizes = [
-  { text: '10.000đ', color: '#FF0000' },
-  { text: '20.000đ', color: '#FFD700' },
-  { text: '50.000đ', color: '#FF4500' },
-  { text: '100.000đ', color: '#DAA520' },
-  { text: '500.000đ', color: '#FF1493' },
-  { text: '1.000.000đ', color: '#8A2BE2' },
-  { text: '5.000.000đ', color: '#000000' }
+  { text: '10.000đ', prob: 90, color: '#FF0000' },
+  { text: '20.000đ', prob: 5, color: '#FFD700' },
+  { text: '50.000đ', prob: 3, color: '#FF4500' },
+  { text: '100.000đ', prob: 1.5, color: '#DAA520' },
+  { text: '500.000đ', prob: 0.3, color: '#FF1493' },
+  { text: '1.000.000đ', prob: 0.15, color: '#8A2BE2' },
+  { text: '5.000.000đ', prob: 0.05, color: '#000000' }
 ];
 
-const segments = [];
-const numSegments = prizes.length;
-const anglePerSegment = (Math.PI * 2) / numSegments;
+// Tính tổng xác suất
+const totalProb = prizes.reduce((sum, p) => sum + p.prob, 0);
 
-for (let i = 0; i < numSegments; i++) {
+// Xây dựng segments dựa trên tỷ lệ xác suất
+let segments = [];
+let startAngle = 0;
+prizes.forEach(p => {
+  const angle = (p.prob / totalProb) * Math.PI * 2;
   segments.push({
-    text: prizes[i].text,
-    color: prizes[i].color,
-    start: i * anglePerSegment,
-    end: (i + 1) * anglePerSegment
+    text: p.text,
+    color: p.color,
+    prob: p.prob,
+    start: startAngle,
+    end: startAngle + angle
   });
-}
+  startAngle += angle;
+});
 
 let currentRotation = 0;
 let isSpinning = false;
@@ -153,6 +156,7 @@ function drawWheel() {
   const radius = cx - 30;
 
   ctx.clearRect(0, 0, canvas.width, canvas.height);
+
   ctx.save();
   ctx.translate(cx, cy);
   ctx.rotate(currentRotation);
@@ -168,7 +172,7 @@ function drawWheel() {
     ctx.lineWidth = 3;
     ctx.stroke();
 
-    const mid = (seg.start + seg.end) / 2;
+    const mid = seg.start + (seg.end - seg.start)/2;
     ctx.save();
     ctx.rotate(mid);
     ctx.textAlign = 'center';
@@ -180,74 +184,93 @@ function drawWheel() {
   });
 
   ctx.restore();
+
+  ctx.beginPath();
+  ctx.arc(cx, cy, 40, 0, Math.PI*2);
+  ctx.fillStyle = '#222';
+  ctx.fill();
 }
 
 spinBtn.onclick = () => {
-  if (isSpinning || spinData.count >= MAX_SPINS_PER_DAY) return;
+  if (isSpinning) return;
 
   isSpinning = true;
   spinBtn.disabled = true;
   resultModal.style.display = 'none';
 
+  // Reset góc quay về 0-2PI để tránh cộng dồn
+  currentRotation = currentRotation % (Math.PI * 2);
+
   fetch('/.netlify/functions/get-prize')
     .then(res => res.json())
     .then(data => {
+      let winningText = data.prize;
 
-      const winningSeg = segments.find(s => s.text === data.prize);
-      if (!winningSeg) return;
+      const winningSeg = segments.find(s => s.text === winningText);
+      if (!winningSeg) {
+        winningText = '10.000đ';
+      }
 
-      const segCenter = (winningSeg.start + winningSeg.end) / 2;
+      const segMidAngle = winningSeg.start + (winningSeg.end - winningSeg.start)/2;
+      const pointerAngle = Math.PI/2; // Kim chỉ xuống dưới
 
-      const pointerAngle = -Math.PI / 2; // 12 giờ
-      const spins = 6 + Math.random() * 2;
+      const extraSpins = 6 + Math.floor(Math.random() * 4); // 6-9 vòng
 
-      // chuẩn hóa góc hiện tại
-      const normalized = currentRotation % (Math.PI * 2);
-
-      // tính delta chính xác
-      let delta = pointerAngle - (segCenter + normalized);
-      delta = (delta + Math.PI * 2) % (Math.PI * 2);
-
-      const targetRotation = currentRotation + spins * Math.PI * 2 + delta;
+      // Tính target rotation: đưa ô thắng về dưới kim + số vòng quay thẩm mỹ
+      const targetRotation = 
+        extraSpins * Math.PI * 2 +
+        (Math.PI * 2 - segMidAngle - pointerAngle);
 
       const duration = 6000;
       const start = Date.now();
-      const initial = currentRotation;
+      const startRotation = currentRotation;
 
       function animate() {
-        const progress = Math.min((Date.now() - start) / duration, 1);
-        const ease = 1 - Math.pow(1 - progress, 4);
+        const progress = Math.min((Date.now()-start)/duration,1);
+        const ease = 1 - Math.pow(1-progress,4);
 
-        currentRotation = initial + (targetRotation - initial) * ease;
+        currentRotation = startRotation + (targetRotation - startRotation) * ease;
         drawWheel();
 
         if (progress < 1) {
           requestAnimationFrame(animate);
         } else {
-
-          // reset chống tích lũy
-          currentRotation = currentRotation % (Math.PI * 2);
-
           isSpinning = false;
-          prizeAmount.textContent = data.prize;
+          prizeAmount.textContent = winningText;
           resultModal.style.display = 'flex';
 
-          spinData.count++;
-          localStorage.setItem('spinData', JSON.stringify(spinData));
-          updateSpinLimit();
+          let particle = 150;
+          let spread = 70;
+
+          if (winningText === '500.000đ') { particle=400; spread=90; }
+          if (winningText === '1.000.000đ') { particle=700; spread=120; }
+          if (winningText === '5.000.000đ') { particle=1200; spread=150; }
+
+          confetti({
+            particleCount: particle,
+            spread: spread,
+            origin: { y: 0.6 }
+          });
+
+          spinBtn.disabled = false;
         }
       }
-
       animate();
+    })
+    .catch(() => {
+      alert("Lỗi kết nối server!");
+      isSpinning = false;
+      spinBtn.disabled = false;
     });
 };
 
 closeModal.onclick = () => {
   resultModal.style.display = 'none';
-  updateSpinLimit();
+  spinBtn.disabled = false;
 };
 
 drawWheel();
 </script>
+
 </body>
 </html>
