@@ -1,9 +1,9 @@
 const prizes = [
   { text: "10.000đ", prob: 49 },
   { text: "20.000đ", prob: 49 },
-  { text: "100.000đ", prob: 1.97 },
-  { text: "500.000đ", prob: 0.03 }, // Cực hiếm (0.03%)
-  { text: "5.000.000đ", prob: 0 }    // Không thể trúng
+  { text: "100.000đ", prob: 1.997 },
+  { text: "500.000đ", prob: 0.003 }, 
+  { text: "5.000.000đ", prob: 0 }
 ];
 
 const totalProb = prizes.reduce((sum, p) => sum + p.prob, 0);
