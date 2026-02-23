@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Vòng Quay Lì Xì May Mắn</title>
+  <title>Vòng Quay Lì Xì May Mắn 2026</title>
   <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"></script>
   <style>
     body {
@@ -23,16 +23,6 @@
     h1 {
       font-size: 2rem;
       text-shadow: 3px 3px 10px black;
-      margin-bottom: 10px;
-    }
-    #remaining-badge {
-      background: rgba(255, 215, 0, 0.9);
-      color: red;
-      padding: 10px 20px;
-      border-radius: 30px;
-      font-size: 1.2rem;
-      font-weight: bold;
-      box-shadow: 0 5px 15px black;
       margin-bottom: 10px;
     }
     #wheel-container {
@@ -94,30 +84,14 @@
       margin: 20px;
       margin-bottom: 40px;
     }
-    #notification {
-      position: fixed;
-      top: 20px;
-      right: 20px;
+    #close-modal {
+      padding: 10px 30px;
+      font-size: 1.5rem;
       background: gold;
       color: red;
-      padding: 15px 25px;
-      border-radius: 10px;
-      font-weight: bold;
-      font-size: 1.1rem;
-      box-shadow: 0 5px 15px black;
-      display: none;
-      z-index: 100;
-      animation: slideIn 0.5s ease;
-    }
-    @keyframes slideIn {
-      from {
-        transform: translateX(100%);
-        opacity: 0;
-      }
-      to {
-        transform: translateX(0);
-        opacity: 1;
-      }
+      border: none;
+      border-radius: 30px;
+      cursor: pointer;
     }
     canvas:not(#wheel) {
       display: none !important;
@@ -127,8 +101,6 @@
 <body>
 
 <h1>Vòng Quay Lì Xì May Mắn 2026</h1>
-
-<!-- <div id="remaining-badge">🎰 Lượt 50k còn lại: <span id="remaining-count">2</span></div> -->
 
 <div id="wheel-container">
   <div id="pointer">▼</div>
@@ -140,10 +112,8 @@
 <div id="result-modal">
   <h2>Chúc Mừng Năm Mới 2026!</h2>
   <p>Bạn nhận được lì xì <span id="prize-amount"></span> 🎉🎉</p>
-  <button id="close-modal" style="padding:10px 30px;font-size:1.5rem;background:gold;color:red;border:none;border-radius:30px;cursor:pointer;">Quay Lại</button>
+  <button id="close-modal">Quay Lại</button>
 </div>
-
-<div id="notification"></div>
 
 <script>
 const canvas = document.getElementById('wheel');
@@ -152,10 +122,8 @@ const spinBtn = document.getElementById('spin');
 const resultModal = document.getElementById('result-modal');
 const prizeAmount = document.getElementById('prize-amount');
 const closeModal = document.getElementById('close-modal');
-const remainingCount = document.getElementById('remaining-count');
-const notification = document.getElementById('notification');
 
-/* ======= PRIZES - CẬP NHẬT THEO BACKEND ======= */
+/* ======= PRIZES - CẬP NHẬT CHO VÒNG QUAY ======= */
 const prizes = [
   { text: '10.000đ', color: '#FF0000' },    // Đỏ
   { text: '20.000đ', color: '#FFD700' },    // Vàng
@@ -182,16 +150,55 @@ for (let i = 0; i < numSegments; i++) {
 let currentRotation = 0;
 let isSpinning = false;
 
-// Hàm hiển thị thông báo
-function showNotification(message, isSuccess = true) {
-  notification.textContent = message;
-  notification.style.background = isSuccess ? 'gold' : '#ff4444';
-  notification.style.color = isSuccess ? 'red' : 'white';
-  notification.style.display = 'block';
+/* ======= LOGIC XỬ LÝ GIẢI THƯỞNG CLIENT-SIDE ======= */
+let count50k = 0;
+const MAX_50K = 2;
+
+// Hàm lấy prizes dựa trên số lần đã trúng 50k
+function getPrizesByCount() {
+  if (count50k >= MAX_50K) {
+    // Đã trúng đủ 2 lần 50k -> chỉ còn 10k và 20k, mỗi loại 50%
+    return [
+      { text: "10.000đ", prob: 50 },
+      { text: "20.000đ", prob: 50 },
+      { text: "50.000đ", prob: 0 },
+      { text: "1.000.000đ", prob: 0 },
+      { text: "5.000.000đ", prob: 0 }
+    ];
+  } else {
+    // Chưa đủ 2 lần 50k -> tỷ lệ như yêu cầu
+    return [
+      { text: "10.000đ", prob: 40 },
+      { text: "20.000đ", prob: 40 },
+      { text: "50.000đ", prob: 20 },
+      { text: "1.000.000đ", prob: 0 },
+      { text: "5.000.000đ", prob: 0 }
+    ];
+  }
+}
+
+function getRandomPrize() {
+  const currentPrizes = getPrizesByCount();
   
-  setTimeout(() => {
-    notification.style.display = 'none';
-  }, 3000);
+  // Tính tổng xác suất
+  const totalProb = currentPrizes.reduce((sum, p) => sum + p.prob, 0);
+  
+  // Random
+  let rand = Math.random() * totalProb;
+  let cum = 0;
+
+  for (const p of currentPrizes) {
+    cum += p.prob;
+    if (rand < cum) {
+      // Nếu trúng 50k thì tăng biến đếm
+      if (p.text === "50.000đ") {
+        count50k++;
+      }
+      return p.text;
+    }
+  }
+
+  return "10.000đ"; // fallback
 }
 
 function resizeCanvas() {
@@ -254,93 +261,74 @@ spinBtn.onclick = () => {
   // Reset góc quay về 0-2PI để tránh cộng dồn
   currentRotation = currentRotation % (Math.PI * 2);
 
-  fetch('/.netlify/functions/get-prize')
-    .then(res => res.json())
-    .then(data => {
-      const winningText = data.prize;
-      const remaining50k = data.remaining50k;
+  // Lấy kết quả từ function client-side
+  setTimeout(() => {
+    const winningText = getRandomPrize();
 
-      // Cập nhật số lượt 50k còn lại
-      remainingCount.textContent = remaining50k;
+    // Tìm index của ô thắng (dựa trên text)
+    let winningIndex = prizes.findIndex(p => p.text === winningText);
+    if (winningIndex === -1) {
+      winningIndex = 0; // Fallback về 10.000đ nếu lỗi
+    }
 
-      // Hiển thị thông báo nếu trúng 50k
-      if (winningText === "50.000đ") {
-        if (remaining50k === 0) {
-          showNotification("⚠️ Đã hết lượt trúng 50k! Từ giờ chỉ còn 10k và 20k!", false);
-        } else {
-          showNotification(`🎉 Chúc mừng! Bạn còn ${remaining50k} lượt trúng 50k!`, true);
+    // Lấy segment tương ứng
+    const winningSeg = segments[winningIndex];
+    const segMidAngle = winningSeg.start + (winningSeg.end - winningSeg.start)/2;
+    const pointerAngle = Math.PI/2; // Kim chỉ xuống dưới
+
+    const extraSpins = 6 + Math.floor(Math.random() * 4); // 6-9 vòng
+
+    // Tính target rotation: đưa ô thắng về dưới kim
+    const targetRotation = 
+      extraSpins * Math.PI * 2 +
+      (Math.PI * 2 - segMidAngle - pointerAngle);
+
+    const duration = 6000;
+    const start = Date.now();
+    const startRotation = currentRotation;
+
+    function animate() {
+      const progress = Math.min((Date.now()-start)/duration,1);
+      const ease = 1 - Math.pow(1-progress,4);
+
+      currentRotation = startRotation + (targetRotation - startRotation) * ease;
+      drawWheel();
+
+      if (progress < 1) {
+        requestAnimationFrame(animate);
+      } else {
+        isSpinning = false;
+        prizeAmount.textContent = winningText;
+        resultModal.style.display = 'flex';
+
+        // Hiệu ứng confetti theo giá trị giải
+        let particle = 150;
+        let spread = 70;
+
+        if (winningText === '50.000đ') { 
+          particle = 300; 
+          spread = 80; 
         }
-      }
-
-      // Tìm index của ô thắng (dựa trên text)
-      let winningIndex = prizes.findIndex(p => p.text === winningText);
-      if (winningIndex === -1) {
-        winningIndex = 0; // Fallback về 10.000đ nếu lỗi
-      }
-
-      // Lấy segment tương ứng
-      const winningSeg = segments[winningIndex];
-      const segMidAngle = winningSeg.start + (winningSeg.end - winningSeg.start)/2;
-      const pointerAngle = Math.PI/2; // Kim chỉ xuống dưới
-
-      const extraSpins = 6 + Math.floor(Math.random() * 4); // 6-9 vòng
-
-      // Tính target rotation: đưa ô thắng về dưới kim
-      const targetRotation = 
-        extraSpins * Math.PI * 2 +
-        (Math.PI * 2 - segMidAngle - pointerAngle);
-
-      const duration = 6000;
-      const start = Date.now();
-      const startRotation = currentRotation;
-
-      function animate() {
-        const progress = Math.min((Date.now()-start)/duration,1);
-        const ease = 1 - Math.pow(1-progress,4);
-
-        currentRotation = startRotation + (targetRotation - startRotation) * ease;
-        drawWheel();
-
-        if (progress < 1) {
-          requestAnimationFrame(animate);
-        } else {
-          isSpinning = false;
-          prizeAmount.textContent = winningText;
-          resultModal.style.display = 'flex';
-
-          // Hiệu ứng confetti theo giá trị giải
-          let particle = 150;
-          let spread = 70;
-
-          if (winningText === '50.000đ') { 
-            particle = 300; 
-            spread = 80; 
-          }
-          if (winningText === '1.000.000đ') { 
-            particle = 600; 
-            spread = 100; 
-          }
-          if (winningText === '5.000.000đ') { 
-            particle = 1200; 
-            spread = 150; 
-          }
-
-          confetti({
-            particleCount: particle,
-            spread: spread,
-            origin: { y: 0.6 }
-          });
-
-          spinBtn.disabled = false;
+        if (winningText === '1.000.000đ') { 
+          particle = 600; 
+          spread = 100; 
         }
+        if (winningText === '5.000.000đ') { 
+          particle = 1200; 
+          spread = 150; 
+        }
+
+        confetti({
+          particleCount: particle,
+          spread: spread,
+          origin: { y: 0.6 }
+        });
+
+        spinBtn.disabled = false;
       }
-      animate();
-    })
-    .catch(() => {
-      showNotification("❌ Lỗi kết nối server!", false);
-      isSpinning = false;
-      spinBtn.disabled = false;
-    });
+    }
+    animate();
+  }, 100); // Delay nhỏ để giả lập network
 };
 
 closeModal.onclick = () => {
