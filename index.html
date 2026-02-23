@@ -25,6 +25,16 @@
       text-shadow: 3px 3px 10px black;
       margin-bottom: 10px;
     }
+    #remaining-badge {
+      background: rgba(255, 215, 0, 0.9);
+      color: red;
+      padding: 10px 20px;
+      border-radius: 30px;
+      font-size: 1.2rem;
+      font-weight: bold;
+      box-shadow: 0 5px 15px black;
+      margin-bottom: 10px;
+    }
     #wheel-container {
       position: relative;
       margin: 10px 20px;
@@ -84,14 +94,41 @@
       margin: 20px;
       margin-bottom: 40px;
     }
+    #notification {
+      position: fixed;
+      top: 20px;
+      right: 20px;
+      background: gold;
+      color: red;
+      padding: 15px 25px;
+      border-radius: 10px;
+      font-weight: bold;
+      font-size: 1.1rem;
+      box-shadow: 0 5px 15px black;
+      display: none;
+      z-index: 100;
+      animation: slideIn 0.5s ease;
+    }
+    @keyframes slideIn {
+      from {
+        transform: translateX(100%);
+        opacity: 0;
+      }
+      to {
+        transform: translateX(0);
+        opacity: 1;
+      }
+    }
     canvas:not(#wheel) {
-  display: none !important;
-}
+      display: none !important;
+    }
   </style>
 </head>
 <body>
 
-<h1>Vòng Quay Lì Xì May Mắn</h1>
+<h1>Vòng Quay Lì Xì May Mắn 2026</h1>
+
+<div id="remaining-badge">🎰 Lượt 50k còn lại: <span id="remaining-count">2</span></div>
 
 <div id="wheel-container">
   <div id="pointer">▼</div>
@@ -106,6 +143,8 @@
   <button id="close-modal" style="padding:10px 30px;font-size:1.5rem;background:gold;color:red;border:none;border-radius:30px;cursor:pointer;">Quay Lại</button>
 </div>
 
+<div id="notification"></div>
+
 <script>
 const canvas = document.getElementById('wheel');
 const ctx = canvas.getContext('2d');
@@ -113,17 +152,19 @@ const spinBtn = document.getElementById('spin');
 const resultModal = document.getElementById('result-modal');
 const prizeAmount = document.getElementById('prize-amount');
 const closeModal = document.getElementById('close-modal');
+const remainingCount = document.getElementById('remaining-count');
+const notification = document.getElementById('notification');
 
-/* ======= PRIZES - CẬP NHẬT THEO BACKEND (5 GIẢI) ======= */
+/* ======= PRIZES - CẬP NHẬT THEO BACKEND ======= */
 const prizes = [
-  { text: '10.000đ', color: '#FF0000' },
-  { text: '20.000đ', color: '#FFD700' },
-  { text: '100.000đ', color: '#DAA520' },
-  { text: '500.000đ', color: '#FF1493' },
-  { text: '5.000.000đ', color: '#000000' }
+  { text: '10.000đ', color: '#FF0000' },    // Đỏ
+  { text: '20.000đ', color: '#FFD700' },    // Vàng
+  { text: '50.000đ', color: '#DAA520' },    // Nâu vàng
+  { text: '1.000.000đ', color: '#FF1493' }, // Hồng
+  { text: '5.000.000đ', color: '#000000' }  // Đen
 ];
 
-// Vòng quay được chia ĐỀU 5 phần (cho đẹp)
+// Vòng quay được chia ĐỀU 5 phần
 const numSegments = prizes.length;
 const anglePerSegment = (Math.PI * 2) / numSegments;
 
@@ -140,6 +181,18 @@ for (let i = 0; i < numSegments; i++) {
 
 let currentRotation = 0;
 let isSpinning = false;
+
+// Hàm hiển thị thông báo
+function showNotification(message, isSuccess = true) {
+  notification.textContent = message;
+  notification.style.background = isSuccess ? 'gold' : '#ff4444';
+  notification.style.color = isSuccess ? 'red' : 'white';
+  notification.style.display = 'block';
+  
+  setTimeout(() => {
+    notification.style.display = 'none';
+  }, 3000);
+}
 
 function resizeCanvas() {
   const size = Math.min(window.innerWidth * 0.85, window.innerHeight * 0.7);
@@ -205,6 +258,19 @@ spinBtn.onclick = () => {
     .then(res => res.json())
     .then(data => {
       const winningText = data.prize;
+      const remaining50k = data.remaining50k;
+
+      // Cập nhật số lượt 50k còn lại
+      remainingCount.textContent = remaining50k;
+
+      // Hiển thị thông báo nếu trúng 50k
+      if (winningText === "50.000đ") {
+        if (remaining50k === 0) {
+          showNotification("⚠️ Đã hết lượt trúng 50k! Từ giờ chỉ còn 10k và 20k!", false);
+        } else {
+          showNotification(`🎉 Chúc mừng! Bạn còn ${remaining50k} lượt trúng 50k!`, true);
+        }
+      }
 
       // Tìm index của ô thắng (dựa trên text)
       let winningIndex = prizes.findIndex(p => p.text === winningText);
@@ -212,7 +278,7 @@ spinBtn.onclick = () => {
         winningIndex = 0; // Fallback về 10.000đ nếu lỗi
       }
 
-      // Lấy segment tương ứng (vẽ đều)
+      // Lấy segment tương ứng
       const winningSeg = segments[winningIndex];
       const segMidAngle = winningSeg.start + (winningSeg.end - winningSeg.start)/2;
       const pointerAngle = Math.PI/2; // Kim chỉ xuống dưới
@@ -246,9 +312,13 @@ spinBtn.onclick = () => {
           let particle = 150;
           let spread = 70;
 
-          if (winningText === '500.000đ') { 
-            particle = 400; 
-            spread = 90; 
+          if (winningText === '50.000đ') { 
+            particle = 300; 
+            spread = 80; 
+          }
+          if (winningText === '1.000.000đ') { 
+            particle = 600; 
+            spread = 100; 
           }
           if (winningText === '5.000.000đ') { 
             particle = 1200; 
@@ -267,7 +337,7 @@ spinBtn.onclick = () => {
       animate();
     })
     .catch(() => {
-      alert("Lỗi kết nối server!");
+      showNotification("❌ Lỗi kết nối server!", false);
       isSpinning = false;
       spinBtn.disabled = false;
     });
