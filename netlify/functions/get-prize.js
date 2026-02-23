@@ -6,7 +6,6 @@ const MAX_50K = 2;
 // Hàm lấy prizes dựa trên số lần đã trúng 50k
 function getPrizesByCount() {
   if (count50k >= MAX_50K) {
-    // Đã trúng đủ 2 lần 50k -> chỉ còn 10k và 20k, mỗi loại 50%
     return [
       { text: "10.000đ", prob: 50 },
       { text: "20.000đ", prob: 50 },
@@ -15,7 +14,6 @@ function getPrizesByCount() {
       { text: "5.000.000đ", prob: 0 }
     ];
   } else {
-    // Chưa đủ 2 lần 50k -> tỷ lệ như yêu cầu
     return [
       { text: "10.000đ", prob: 40 },
       { text: "20.000đ", prob: 40 },
